@@ -62,9 +62,8 @@ try:
     logger(ircmsg,f)
     if ircmsg.find("PRIVMSG "+botnick+" :Hello") != -1:
       #PRIVMSG to Mybot
-      print("test case 1 name of sender:%s" %name_parser(ircmsg))
-      if ircsock.send("PRIVMSG "+name_parser(ircmsg)+' :Hello!!! How are you? I am fine here.\n'):
-        logger("PRIVMSG "+name_parser(ircmsg)+' :Hello!!! How are you? I am fine here.\n',f)
+      if ircsock.send("PRIVMSG "+name_parser(ircmsg)+' :Hello!!! How are you?\n'):
+        logger("PRIVMSG "+name_parser(ircmsg)+' :Hello!!! How are you?\n',f)
 
       if ircmsg.find("PRIVMSG "+channel+' :Hello '+botnick) != -1:
         #PRIVMSG to Mybot on channel
@@ -75,10 +74,5 @@ try:
       if ircmsg.find("PING :") != -1:
         ping()
 
-      if ircmsg.find("Test sendmsg") != -1:
-        lst=ircmsg.split()
-        arg=' '.join(lst[(lst.index('sendmsg') + 1 ):])
-        sendmsg(channel,arg,1)
-        print("Test:message sent %s:" %arg)
 except(KeyboardInterrupt):
   close_logger(f)
