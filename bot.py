@@ -1,35 +1,84 @@
 import socket
+import datetime
+import argparse
 
 server = "irc.freenode.net"
 channel = "#jec-dev"
-nick = "Mybot"
-
+botnick = "Mybot"
+logfileSuffix = "logs"
+date_time=datetime.datetime(2016,9,13)
+  
 def ping(): # responds to server pings
   ircsock.send("PONG :pingis\n")
 
-def sendmsg(chan , msg):
-  ircsock.send("PRIVMSG "+ chan +" :"+ msg +"\n")
-
+def sendmsg(chan , msg,s=0):
+  if s:
+    ircsock.send(msg)
+  else:
+    ircsock.send("PRIVMSG "+ chan +" :"+ msg +"\n")
+  
 def joinchan(chan):
   ircsock.send("JOIN "+ chan +"\n")
 
-def hello():
-  ircsock.send("PRIVMSG "+ channel +" :Hello!\n")
+def hello(receiver=channel):
+  ircsock.send("PRIVMSG "+ receiver +" :Hello!\n")
 
-ircsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-ircsock.connect((server, 6667)) # Here we connect to the server using the port 6667
-ircsock.send("USER "+ botnick +" "+ botnick +" "+ botnick +" Test Bot\n") # user authentication
-ircsock.send("NICK "+ botnick +"\n") # here we actually assign the nick to the bot
+def name_parser(msg):
+  #  Returns the values from the server message.
+  #  :amey!~amey@182.70.246.196 PRIVMSG #jec-dev :Hello Mybot
+  #  ^^^^This is basic syntax of messages received from server. 
+  return msg[1:(msg.find('!'))]
+  
+def init_logger():
+  #Initialses the open function and returns a file handle to write logs to
+  logfile=channel[1:]+'.'+logfileSuffix
+  f=open(logfile,'a')
+  f.write('\n***********************Logging started***************************\n')
+  f.write('\t%s\t\n'%date_time.now().strftime('%Y-%m-%d %H:%M:%S'))
+  return f
 
-joinchan(channel)
+def logger(msg,f):
+  #stores the message into a file on the host
+  f.write(str(msg)+'\n')
+  
+def close_logger(f):
+  f.write('\t%s\t\n'%date_time.now().strftime('%Y-%m-%d %H:%M:%S'))
+  f.write('\n***********************Logging ended***************************\n')
+  f.close()
 
-while 1:
-  ircmsg = ircsock.recv(2048)
-  ircmsg = ircmsg.strip('\n\r') # removing any unnecessary linebreaks.
-  print(ircmsg) # server messages
+try:
+  ircsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  ircsock.connect((server, 6667)) # Here we connect to the server using the port 6667
+  ircsock.send("USER "+ botnick +" "+ botnick +" "+ botnick +" Test Bot\n") # user authentication
+  ircsock.send("NICK "+ botnick +"\n") # here we actually assign the nick to the bot
 
-  if ircmsg.find(":Hello "+ botnick) != -1:
-    hello()
+  joinchan(channel)
+  f=init_logger()
 
-  if ircmsg.find("PING :") != -1:
-    ping()
+  while 1:
+    ircmsg = ircsock.recv(2048)
+    ircmsg = ircmsg.strip('\n\r') # removing any unnecessary linebreaks.
+    print(ircmsg) # server messages
+    logger(ircmsg,f)
+    if ircmsg.find("PRIVMSG "+botnick+" :Hello") != -1:
+      #PRIVMSG to Mybot
+      print("test case 1 name of sender:%s" %name_parser(ircmsg))
+      if ircsock.send("PRIVMSG "+name_parser(ircmsg)+' :Hello!!! How are you? I am fine here.\n'):
+        logger("PRIVMSG "+name_parser(ircmsg)+' :Hello!!! How are you? I am fine here.\n',f)
+
+      if ircmsg.find("PRIVMSG "+channel+' :Hello '+botnick) != -1:
+        #PRIVMSG to Mybot on channel
+        name=name_parser(ircmsg)
+      if ircsock.send("PRIVMSG "+channel+' :Hello amey \n'):
+        logger("PRIVMSG "+channel+' :Hello amey \n',f)
+
+      if ircmsg.find("PING :") != -1:
+        ping()
+
+      if ircmsg.find("Test sendmsg") != -1:
+        lst=ircmsg.split()
+        arg=' '.join(lst[(lst.index('sendmsg') + 1 ):])
+        sendmsg(channel,arg,1)
+        print("Test:message sent %s:" %arg)
+except(KeyboardInterrupt):
+  close_logger(f)
