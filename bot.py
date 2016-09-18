@@ -31,11 +31,10 @@ def name_parser(msg):
   
 def init_logger():
   #Initialses the open function and returns a file handle to write logs to
-  logfile=channel[1:]+'.'+logfileSuffix
-  f=open(logfile,'a')
+  
   f.write('\n***********************Logging started***************************\n')
   f.write('\t%s\t\n'%date_time.now().strftime('%Y-%m-%d %H:%M:%S'))
-  return f
+  
 
 def logger(msg,f):
   #stores the message into a file on the host
@@ -44,35 +43,35 @@ def logger(msg,f):
 def close_logger(f):
   f.write('\t%s\t\n'%date_time.now().strftime('%Y-%m-%d %H:%M:%S'))
   f.write('\n***********************Logging ended***************************\n')
-  f.close()
 
-try:
-  ircsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  ircsock.connect((server, 6667)) # Here we connect to the server using the port 6667
-  ircsock.send("USER "+ botnick +" "+ botnick +" "+ botnick +" Test Bot\n") # user authentication
-  ircsock.send("NICK "+ botnick +"\n") # here we actually assign the nick to the bot
 
-  joinchan(channel)
-  f=init_logger()
-
-  while 1:
-    ircmsg = ircsock.recv(2048)
-    ircmsg = ircmsg.strip('\n\r') # removing any unnecessary linebreaks.
-    print(ircmsg) # server messages
-    logger(ircmsg,f)
-    if ircmsg.find("PRIVMSG "+botnick+" :Hello") != -1:
-      #PRIVMSG to Mybot
-      if ircsock.send("PRIVMSG "+name_parser(ircmsg)+' :Hello!!! How are you?\n'):
+logfile=channel[1:]+'.'+logfileSuffix
+with open(logfile,'a') as f:
+  try:
+    init_logger()
+    ircsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    ircsock.connect((server, 6667)) # Here we connect to the server using the port 6667
+    ircsock.send("USER "+ botnick +" "+ botnick +" "+ botnick +" Test Bot\n") # user authentication
+    ircsock.send("NICK "+ botnick +"\n") # here we actually assign the nick to the bot
+    joinchan(channel)
+    while 1:
+      ircmsg = ircsock.recv(2048)
+      ircmsg = ircmsg.strip('\n\r') # removing any unnecessary linebreaks.
+      print(ircmsg) # server messages
+      logger(ircmsg,f)
+      if ircmsg.find("PRIVMSG "+botnick+" :Hello ") != -1:
+        #PRIVMSG to Mybot
+        ircsock.send("PRIVMSG "+name_parser(ircmsg)+' :Hello!!! How are you?\n')
         logger("PRIVMSG "+name_parser(ircmsg)+' :Hello!!! How are you?\n',f)
 
       if ircmsg.find("PRIVMSG "+channel+' :Hello '+botnick) != -1:
         #PRIVMSG to Mybot on channel
         name=name_parser(ircmsg)
-      if ircsock.send("PRIVMSG "+channel+' :Hello amey \n'):
-        logger("PRIVMSG "+channel+' :Hello amey \n',f)
+        ircsock.send("PRIVMSG "+channel+' :Hello '+name+' \n')
+        logger("PRIVMSG "+channel+' :Hello '+name+' \n',f)
 
       if ircmsg.find("PING :") != -1:
         ping()
 
-except(KeyboardInterrupt):
-  close_logger(f)
+  except(KeyboardInterrupt):
+    close_logger(f)
